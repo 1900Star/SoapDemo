@@ -18,13 +18,13 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String LH_WEB_SERVER_URL = "http://112.95.175.35:30004/WebService.asmx";
     private static final String GET_KEY_RESULT = "GetKeyResult";
+    private static final String GET_TABLE_RESULT = "GetTableResult";
+    private static final String UPDATE_TABLE_RESULT = "UpdateTableResult";
     private Handler mHandler;
 
     @Override
@@ -35,78 +35,61 @@ public class MainActivity extends AppCompatActivity {
         Button btn = findViewById(R.id.btn);
         mHandler = new Handler(this.getMainLooper());
         btn.setOnClickListener(v -> new Thread(() -> {
+            String randomKey = RandomUtil.getRandomKey(16);
 //            String data = getData();
 //            Log.d("lsp", "返回的数据    " + data);
-            getKey();
+            String aesKey = getKey(randomKey);
+            if (aesKey != null) {
+
+                Log.d("lsp", "返回的数据  aesKey  " + aesKey);
+//                getTableData(randomKey, aesKey);
+                updateTableData(randomKey, aesKey);
+            }
 
         }).start());
     }
 
-    private void getJsonData(String randomKey, String aesKey) {
+    private void getTableData(String randomKey, String aesKey) {
 
-        String Sql = "SELECT TOP 10 * FROM [DB_Light_LH].[dbo].[ListUser]";
-
+        String sql = "SELECT TOP 10 * FROM [DB_Light_LH].[dbo].[Log_list]";
         try {
             URL url = new URL(LH_WEB_SERVER_URL);
-            HttpURLConnection connection = (HttpURLConnection) url
-                    .openConnection();
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault());
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setDoOutput(true);
             connection.setRequestMethod("POST");
             connection.setDoInput(true);
             connection.setRequestProperty("Content-Type",
                     "text/xml; charset=utf-8");
             connection.setRequestProperty("SOAPAction",
-                    "http://tempuri.org/GetKey");
+                    "http://tempuri.org/GetTable");
 
             OutputStreamWriter out = new OutputStreamWriter(
                     connection.getOutputStream(), StandardCharsets.UTF_8);
             StringBuilder header_sb = new StringBuilder();
-            StringBuilder footer_sb = new StringBuilder();
-
-//          <?xml version="1.0" encoding="utf-8"?>
-//            <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-//  <soap:Header>
-//    <MySoapHeader xmlns="http://tempuri.org/">
-//      <UserID>string</UserID>
-//      <PassWord>string</PassWord>
-//    </MySoapHeader>
-//  </soap:Header>
-//  <soap:Body>
-//    <GetTable xmlns="http://tempuri.org/">
-//      <id>string</id>
-//      <sql>string</sql>
-//    </GetTable>
-//  </soap:Body>
-//</soap:Envelope>
-            StringBuilder headerBuilder = new StringBuilder();
+            String encryptUserName = AesEncryptor.encrypt("admin", aesKey);
+            String encryptPassword = AesEncryptor.encrypt("admin", aesKey);
+            String encryptSql = AesEncryptor.encrypt(sql, aesKey);
             header_sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
             header_sb
                     .append("<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">");
 
             header_sb.append("<soap:Header>");
             header_sb.append("<MySoapHeader xmlns=\"http://tempuri.org/\">");
-            headerBuilder.append("<UserID>").append(randomKey).append("</UserID>");
-            headerBuilder.append("<PassWord>").append(randomKey).append("</PassWord>");
+            header_sb.append("<UserID>").append(encryptUserName).append("</UserID>");
+            header_sb.append("<PassWord>").append(encryptPassword).append("</PassWord>");
             header_sb.append("</MySoapHeader>");
             header_sb.append("</soap:Header>");
 
             header_sb.append("<soap:Body>");
             header_sb.append("<GetTable xmlns=\"http://tempuri.org/\">");
             header_sb.append("<id>").append(randomKey).append("</id>");
-            header_sb.append("<sql>").append(randomKey).append("</sql>");
+            header_sb.append("<sql>").append(encryptSql).append("</sql>");
             header_sb.append("</GetTable>");
-            header_sb.append("</Body>");
+            header_sb.append("</soap:Body>");
             header_sb.append("</soap:Envelope>");
-
-
-
+            Log.d("lsp", "最后的参数   " + header_sb.toString());
             // 需要的参数
-            StringBuilder idBuilder = new StringBuilder();
-
-            Log.d("lsp", "随机数  " + randomKey);
-            idBuilder.append("<id>").append(randomKey).append("</id>");
-            out.write(header_sb + idBuilder.toString() + footer_sb); // 直接post的进行调用！
+            out.write(header_sb.toString()); // 直接post的进行调用！
 
             //解析返回的XML字串
             out.flush();
@@ -117,8 +100,11 @@ public class MainActivity extends AppCompatActivity {
 
             BufferedReader bufferedReader = new BufferedReader(
                     new InputStreamReader(urlStream));
-            String s = parseResponseXml(urlStream, GET_KEY_RESULT);
-            Log.d("lsp", "解析结果   " + s);
+            String s = parseResponseXml(urlStream, GET_TABLE_RESULT);
+
+            Log.d("lsp", "解析结果 JsonArray  " + s);
+            String decryptResult = JsonDataUtil.getDecryptResult(s, aesKey);
+            Log.d("lsp", "decryptResult   " + decryptResult);
 
             bufferedReader.close();
 
@@ -129,16 +115,81 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
+    }
+    private void updateTableData(String randomKey, String aesKey) {
+
+        String sql = "update [DB_Light_LH].[dbo].[Log_list] set c_permissions = '{1}' where c_id = 21858";
+        try {
+            URL url = new URL(LH_WEB_SERVER_URL);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoOutput(true);
+            connection.setRequestMethod("POST");
+            connection.setDoInput(true);
+            connection.setRequestProperty("Content-Type",
+                    "text/xml; charset=utf-8");
+            connection.setRequestProperty("SOAPAction",
+                    "http://tempuri.org/UpdateTable");
+
+            OutputStreamWriter out = new OutputStreamWriter(
+                    connection.getOutputStream(), StandardCharsets.UTF_8);
+            StringBuilder header_sb = new StringBuilder();
+            String encryptUserName = AesEncryptor.encrypt("admin", aesKey);
+            String encryptPassword = AesEncryptor.encrypt("admin", aesKey);
+            String encryptSql = AesEncryptor.encrypt(sql, aesKey);
+            header_sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+            header_sb
+                    .append("<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">");
+
+            header_sb.append("<soap:Header>");
+            header_sb.append("<MySoapHeader xmlns=\"http://tempuri.org/\">");
+            header_sb.append("<UserID>").append(encryptUserName).append("</UserID>");
+            header_sb.append("<PassWord>").append(encryptPassword).append("</PassWord>");
+            header_sb.append("</MySoapHeader>");
+            header_sb.append("</soap:Header>");
+
+            header_sb.append("<soap:Body>");
+            header_sb.append("<UpdateTable xmlns=\"http://tempuri.org/\">");
+            header_sb.append("<id>").append(randomKey).append("</id>");
+            header_sb.append("<sql>").append(encryptSql).append("</sql>");
+            header_sb.append("</UpdateTable>");
+            header_sb.append("</soap:Body>");
+            header_sb.append("</soap:Envelope>");
+            Log.d("lsp", "最后的参数   " + header_sb.toString());
+            // 需要的参数
+            out.write(header_sb.toString()); // 直接post的进行调用！
+
+            //解析返回的XML字串
+            out.flush();
+            out.close();
+            connection.connect();
+
+            InputStream urlStream = connection.getInputStream();
+
+            BufferedReader bufferedReader = new BufferedReader(
+                    new InputStreamReader(urlStream));
+            String s = parseResponseXml(urlStream, UPDATE_TABLE_RESULT);
+
+            Log.d("lsp", "解析结果 update JsonArray  " + s);
+            String decryptResult = JsonDataUtil.getDecryptResult(s, aesKey);
+            Log.d("lsp", "decryptResult  update " + decryptResult);
+
+            bufferedReader.close();
+
+
+        } catch (Exception e) {
+            Log.d("lsp", e.getMessage());
+
+        }
+
 
     }
 
 
-    private void getKey() {
+    private String getKey(String randomKey) {
         try {
             URL url = new URL(LH_WEB_SERVER_URL);
             HttpURLConnection connection = (HttpURLConnection) url
                     .openConnection();
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault());
             connection.setDoOutput(true);
             connection.setRequestMethod("POST");
             connection.setDoInput(true);
@@ -150,8 +201,7 @@ public class MainActivity extends AppCompatActivity {
             OutputStreamWriter out = new OutputStreamWriter(
                     connection.getOutputStream(), StandardCharsets.UTF_8);
             StringBuilder sb = new StringBuilder();
-            String randomKey = RandomUtil.getRandomKey(16);
-            Log.d("lsp", "随机数  " + randomKey);
+
             sb.append("<id>").append(randomKey).append("</id>");
             String header_sb = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
                     "<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" +
@@ -172,16 +222,15 @@ public class MainActivity extends AppCompatActivity {
             BufferedReader bufferedReader = new BufferedReader(
                     new InputStreamReader(urlStream));
             String s = parseResponseXml(urlStream, GET_KEY_RESULT);
-            Log.d("lsp", "解析结果   " + s);
-
+            Log.d("lsp", "解析结果 Key " + s);
             bufferedReader.close();
-
+            return s;
 
         } catch (Exception e) {
             Log.d("lsp", e.getMessage());
 
         }
-
+        return null;
     }
 
 
