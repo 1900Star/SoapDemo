@@ -33,14 +33,14 @@ public class JsonDataUtil {
 
     public static String getDecryptResult(String jsonArray, String aesKey) {
         if (jsonArray != null) {
-            String responseCode1 = JsonDataUtil.getValue(jsonArray, "result");
-            if ("200".equals(responseCode1)) {
-                String result = JsonDataUtil.getValue(jsonArray, "result");
+            String responseCode1 = JsonDataUtil.getValue(jsonArray, "code");
+            String result = JsonDataUtil.getValue(jsonArray, "result");
+            if (responseCode1.contains("200")) {
+
                 return AesEncryptor.decrypt(result, aesKey);
             } else {
-                String result = JsonDataUtil.getValue(jsonArray, "result");
                 String decrypt = AesEncryptor.decrypt(result, aesKey);
-                Log.d(TAG, "请求失效的结果：  没有权限 " + decrypt);
+                Log.d(TAG, "请求失效的结果：  没有权限 ");
                 return decrypt;
             }
         } else {
@@ -48,7 +48,6 @@ public class JsonDataUtil {
             return null;
         }
     }
-
 
 
 }

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope
-    xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns:xsd="http://www.w3.org/2001/XMLSchema"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://schemas.xmlsoap.org/soap/envelope/ ">
@@ -9,4 +8,41 @@
             <GetKeyResult>kpXimDUdhY6Dh12f</GetKeyResult>
         </GetKeyResponse>
     </soap:Body>
+</soap:Envelope>
+
+
+    <?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+<soap:Header>
+    <MySoapHeader xmlns="http://tempuri.org/">
+        <UserID>string</UserID>
+        <PassWord>string</PassWord>
+    </MySoapHeader>
+</soap:Header>
+<soap:Body>
+    <QueryOrder xmlns="http://tempuri.org/">
+        <id>string</id>
+        <mark>string</mark>
+    </QueryOrder>
+</soap:Body>
+</soap:Envelope>
+
+    <?xml version="1.0" encoding="utf-8"?><soap:Envelope
+xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<soap:Header>
+    <MySoapHeader xmlns="http://tempuri.org/">
+        <UserID>4mKBtRTaebKlvyFK4byJ6Q==
+        </UserID>
+        <PassWord>4mKBtRTaebKlvyFK4byJ6Q==
+        </PassWord>
+    </MySoapHeader>
+</soap:Header>
+<soap:Body>
+    <QueryOrder xmlns="http://tempuri.org/">
+        <id>?qEkMfm3k3J5$VzT</id>
+        <mark>85NFlUpGU/lvI2UG4UDdG+xdr4sgKnsq0ZWpsaZ1dHE=
+        </mark>
+    </QueryOrder>
+</soap:Body>
 </soap:Envelope>
